@@ -1,4 +1,45 @@
 # statisticapy/models/linear_model.py
+def predict(self, X):
+    """
+    Predict using the linear model.
+
+    Parameters
+    ----------
+    X : array-like or DataFrame of shape (n_samples, n_features)
+        Samples; if model was fit with formula, can be a pandas DataFrame compatible
+        with the formula.
+
+    Returns
+    -------
+    y_pred : ndarray of shape (n_samples,)
+        Predicted values
+    """
+    if not self.fitted:
+        raise RuntimeError("You must fit the model before prediction.")
+
+    if self.formula is not None:
+        # Expect DataFrame input for consistent parsing
+        import pandas as pd
+        if not isinstance(X, pd.DataFrame):
+            raise TypeError("When fitted with formula, predict expects pandas DataFrame input.")
+
+        # Use formula parser to generate design matrix (without response variable)
+        # Trick: parse formula without response to get design matrix for predictors only
+        from ..utils.formula_parser import FormulaParser
+
+        # Extract formula RHS only: e.g., 'y ~ x1 + x2' --> 'x1 + x2'
+        rhs_formula = self.formula.split('~', 1)[1].strip()
+        # Build formula with no response, but intercept respected
+        design_parser = FormulaParser(f"~ {rhs_formula}", X)
+        _, X_design = design_parser.parse()
+
+        # Prediction with design matrix - assume intercept included if formula specified
+        return X_design @ self.params_
+    else:
+        X = np.asarray(X)
+        if self.fit_intercept:
+            X = np.column_stack((np.ones(X.shape[0]), X))
+        return X @ self.params_
 
 import numpy as np
 from ..core import BaseModel
