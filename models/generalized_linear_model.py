@@ -1,4 +1,27 @@
 # statisticapy/models/generalized_linear_model.py
+def predict(self, X):
+    if not self.fitted:
+        raise RuntimeError("You must fit the model before prediction.")
+    
+    if self.formula is not None:
+        import pandas as pd
+        if not isinstance(X, pd.DataFrame):
+            raise TypeError("When fitted with formula, predict expects pandas DataFrame input.")
+        
+        from ..utils.formula_parser import FormulaParser
+
+        rhs_formula = self.formula.split('~', 1)[1].strip()
+        design_parser = FormulaParser(f"~ {rhs_formula}", X)
+        _, X_design = design_parser.parse()
+
+        eta = X_design @ self.params_
+        return self.family.link_inv(eta)
+    else:
+        X = np.asarray(X)
+        if self.fit_intercept:
+            X = np.column_stack((np.ones(X.shape[0]), X))
+        eta = X @ self.params_
+        return self.family.link_inv(eta)
 
 import numpy as np
 from ..core import BaseModel
